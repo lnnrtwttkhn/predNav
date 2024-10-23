@@ -161,6 +161,9 @@ predAccDistOverall<-figure2_data %>%
   dplyr::filter(!is.na(cor_distance))
 predAccDistOverall
 
+# calculate average difference in accuracy between one-step and four-step trials.
+predAccDistOverall$avg[predAccDistOverall$cor_distance == 1] - predAccDistOverall$avg[predAccDistOverall$cor_distance == 4]
+
 #accuracy distance model
 summary(glmer(avgAcc~cor_distance+(1+cor_distance|participant), family = "binomial", data = figure2_data))
 #rt distance model
