@@ -189,7 +189,7 @@ predAcc_plot
 #cor dist RT graph
 predRTDist<-figure2_data %>% 
   dplyr::group_by(participant, cor_distance) %>%
-  dplyr::filter(avgAcc == 1) %>% 
+  # dplyr::filter(avgAcc == 1) %>% 
   dplyr::summarise(avg = mean(avgRT, na.rm = T)) %>% 
   dplyr::filter(!is.na(cor_distance))
 predRTDist
