@@ -11,137 +11,137 @@ library(broom)
 library(rstatix)
 library(RColorBrewer)
 
-#behavioural data----------
-baseDir<-"~/Desktop/serverbroken_2/behav_data/"
-setwd(baseDir)
-subs<-list.files()
-
-task_list<-c("Prediction")
-
-task_run_list<-c(2)
-
-subs<-subs[-c(1,14,20,29)]
-
-for (sub in subs){
-  
-  #change wd to include the sub number
-  setwd(paste0(baseDir,'/',sub))
-  
-  
-  for (task in task_list) {
-    
-    #create an index of task lists to pick the proper run
-    #I don't think I need this because there's only one task list
-    i<-ifelse(task == "Prediction", 1, 2)
-    
-    #is this going though all numbers?
-    for (run in (1:task_run_list)) {
-      
-      print(task_run_list)
-      print(1:task_run_list)
-      print(run)
-      print("######")
-      
-      #the subject num (will likely have to revisit this when sub nums get larger than 10)
-      fname<- paste(str_sub(sub,-1), "_", as.character(run), "_", task, sep = "") 
-      
-      #get the files that match the pattern from fname, and then the first index of that list (that will be the csv)
-      temp_file<-list.files(pattern = fname)
-      temp_file<-temp_file[1]
-      temp_file<-read.csv(paste0(baseDir, sub, "/", temp_file))
-      
-      
-      #gets rid of every other row with nothing in it, and removes unneccessary columns
-      temp_clean<-temp_file[!is.na(temp_file$iti_StartTime),]
-      temp_clean$frameRate<-NULL
-      temp_clean$psychopyVersion<-NULL
-      temp_clean$X56<-NULL
-      
-      temp_clean<-temp_clean %>% 
-        mutate(cue = paste0(str_sub(scene, end = -5), "_", path)) %>% 
-        mutate(acc = Resp.corr) %>%
-        mutate(rt = Resp.rt)
-      
-      #rename columns for rt and acc
-      #colnames(temp_clean)[40:42]<- c("resp","acc","rt")
-      
-      #now get the order of distance into future - this code is taken straight from behav_analysis.r
-      order_files<-list.files(pattern=c("WalkThrough"))
-      order_only<-read.csv(order_files[1],header=TRUE)
-      
-      order_only$scene<-as.character(order_only$scene)
-      order_only<-subset(order_only, (scene != "18.png") & (scene != "19.png"))
-      
-      temp_clean$path<-as.character(temp_clean$path)
-      temp_clean$map<-as.character(temp_clean$map)
-      temp_clean$scene<-as.character(temp_clean$scene)
-      temp_clean$scene_a<-as.character(temp_clean$scene_a)
-      temp_clean$scene_b<-as.character(temp_clean$scene_b)
-      temp_clean$cor_distance<-NA
-      temp_clean$incor_distance<-NA
-      
-      for (row in 1:nrow(temp_clean)){
-        if (temp_clean$scene_a[row] != ""){
-          pth<-temp_clean$path[row]
-          mp<-temp_clean$map[row]
-          p<-temp_clean$participant[row]
-          temp<-subset(order_only, path == pth & map == mp)
-          if (temp_clean$cor_resp[row] == 1){
-            left<-temp_clean$scene_a[row]
-            incorr<-temp_clean$scene_b[row] #added this
-            pred<-temp_clean$scene[row]
-            ind_1<-which(temp$scene == pred)
-            ind_2<-which(temp$scene == left)
-            ind_3<-which(temp$scene == incorr) #added this
-            temp_clean$cor_distance[row]<-ifelse(ind_2>ind_1, abs(ind_2-ind_1), abs(ind_2+8-ind_1))
-            temp_clean$incor_distance[row]<-ifelse(ind_3>ind_1, abs(ind_3-ind_1), abs(ind_3+8-ind_1))
-          }
-          else if (temp_clean$cor_resp[row] == 2){
-            right<-temp_clean$scene_b[row]
-            incorr<-temp_clean$scene_a[row] #added this
-            pred<-temp_clean$scene[row]
-            ind_1<-which(temp$scene == pred)
-            ind_2<-which(temp$scene == right)
-            ind_3<-which(temp$scene == incorr) #added this
-            temp_clean$cor_distance[row]<-ifelse(ind_2>ind_1, abs(ind_2-ind_1), abs(ind_2+8-ind_1))
-            temp_clean$incor_distance[row]<-ifelse(ind_3>ind_1, abs(ind_3-ind_1), abs(ind_3+8-ind_1))
-          }
-        }
-      }
-      
-      write_out_file<-temp_clean %>% 
-        dplyr::select(cue, scene, session, participant, acc, rt, path, map, cor_distance, incor_distance) %>% 
-        dplyr::filter(!is.na(cor_distance))
-      print('#########')
-      print(run)
-      print(unique(write_out_file$participant))
-      print(mean(write_out_file$acc))
-      print(table(write_out_file$cor_distance))
-      
-      col_order<-c("1_green", "2_green", "3_green", "4_green", "5_green", "6_green", 
-                   "7_green", "8_green", "9_green", "10_green", "11_green", "12_green", 
-                   "13_green", "14_green", "15_green", "16_green",
-                   "1_blue", "2_blue", "3_blue", "4_blue", "5_blue", "6_blue", "7_blue", 
-                   "8_blue", "9_blue", "10_blue", "11_blue", "12_blue", 
-                   "13_blue", "14_blue", "15_blue", "16_blue")
-      write_out_file<- write_out_file %>%
-        slice(match(col_order, cue))
-      
-      outname<-paste0(sub,"_task-",task,"_run-0",run,"_pred_behav_regressors.txt")
-      
-      if ((sub == 'sub-01') & (run == 1)) {
-        behav_data<-write_out_file
-      }
-      else {
-        behav_data<-rbind(behav_data, write_out_file)
-      }
-      
-      #Uncomment this to write the regressors by room number
-      #write.table(write_out_file, outname, col.names= colnames(write_out_file), 
-      #            row.names= FALSE, sep = "\t"  )
-    }
-  }
-}
+# #behavioural data----------
+# baseDir<-"~/Desktop/serverbroken_2/behav_data/"
+# setwd(baseDir)
+# subs<-list.files()
+# 
+# task_list<-c("Prediction")
+# 
+# task_run_list<-c(2)
+# 
+# subs<-subs[-c(1,14,20,29)]
+# 
+# for (sub in subs){
+#   
+#   #change wd to include the sub number
+#   setwd(paste0(baseDir,'/',sub))
+#   
+#   
+#   for (task in task_list) {
+#     
+#     #create an index of task lists to pick the proper run
+#     #I don't think I need this because there's only one task list
+#     i<-ifelse(task == "Prediction", 1, 2)
+#     
+#     #is this going though all numbers?
+#     for (run in (1:task_run_list)) {
+#       
+#       print(task_run_list)
+#       print(1:task_run_list)
+#       print(run)
+#       print("######")
+#       
+#       #the subject num (will likely have to revisit this when sub nums get larger than 10)
+#       fname<- paste(str_sub(sub,-1), "_", as.character(run), "_", task, sep = "") 
+#       
+#       #get the files that match the pattern from fname, and then the first index of that list (that will be the csv)
+#       temp_file<-list.files(pattern = fname)
+#       temp_file<-temp_file[1]
+#       temp_file<-read.csv(paste0(baseDir, sub, "/", temp_file))
+#       
+#       
+#       #gets rid of every other row with nothing in it, and removes unneccessary columns
+#       temp_clean<-temp_file[!is.na(temp_file$iti_StartTime),]
+#       temp_clean$frameRate<-NULL
+#       temp_clean$psychopyVersion<-NULL
+#       temp_clean$X56<-NULL
+#       
+#       temp_clean<-temp_clean %>% 
+#         mutate(cue = paste0(str_sub(scene, end = -5), "_", path)) %>% 
+#         mutate(acc = Resp.corr) %>%
+#         mutate(rt = Resp.rt)
+#       
+#       #rename columns for rt and acc
+#       #colnames(temp_clean)[40:42]<- c("resp","acc","rt")
+#       
+#       #now get the order of distance into future - this code is taken straight from behav_analysis.r
+#       order_files<-list.files(pattern=c("WalkThrough"))
+#       order_only<-read.csv(order_files[1],header=TRUE)
+#       
+#       order_only$scene<-as.character(order_only$scene)
+#       order_only<-subset(order_only, (scene != "18.png") & (scene != "19.png"))
+#       
+#       temp_clean$path<-as.character(temp_clean$path)
+#       temp_clean$map<-as.character(temp_clean$map)
+#       temp_clean$scene<-as.character(temp_clean$scene)
+#       temp_clean$scene_a<-as.character(temp_clean$scene_a)
+#       temp_clean$scene_b<-as.character(temp_clean$scene_b)
+#       temp_clean$cor_distance<-NA
+#       temp_clean$incor_distance<-NA
+#       
+#       for (row in 1:nrow(temp_clean)){
+#         if (temp_clean$scene_a[row] != ""){
+#           pth<-temp_clean$path[row]
+#           mp<-temp_clean$map[row]
+#           p<-temp_clean$participant[row]
+#           temp<-subset(order_only, path == pth & map == mp)
+#           if (temp_clean$cor_resp[row] == 1){
+#             left<-temp_clean$scene_a[row]
+#             incorr<-temp_clean$scene_b[row] #added this
+#             pred<-temp_clean$scene[row]
+#             ind_1<-which(temp$scene == pred)
+#             ind_2<-which(temp$scene == left)
+#             ind_3<-which(temp$scene == incorr) #added this
+#             temp_clean$cor_distance[row]<-ifelse(ind_2>ind_1, abs(ind_2-ind_1), abs(ind_2+8-ind_1))
+#             temp_clean$incor_distance[row]<-ifelse(ind_3>ind_1, abs(ind_3-ind_1), abs(ind_3+8-ind_1))
+#           }
+#           else if (temp_clean$cor_resp[row] == 2){
+#             right<-temp_clean$scene_b[row]
+#             incorr<-temp_clean$scene_a[row] #added this
+#             pred<-temp_clean$scene[row]
+#             ind_1<-which(temp$scene == pred)
+#             ind_2<-which(temp$scene == right)
+#             ind_3<-which(temp$scene == incorr) #added this
+#             temp_clean$cor_distance[row]<-ifelse(ind_2>ind_1, abs(ind_2-ind_1), abs(ind_2+8-ind_1))
+#             temp_clean$incor_distance[row]<-ifelse(ind_3>ind_1, abs(ind_3-ind_1), abs(ind_3+8-ind_1))
+#           }
+#         }
+#       }
+#       
+#       write_out_file<-temp_clean %>% 
+#         dplyr::select(cue, scene, session, participant, acc, rt, path, map, cor_distance, incor_distance) %>% 
+#         dplyr::filter(!is.na(cor_distance))
+#       print('#########')
+#       print(run)
+#       print(unique(write_out_file$participant))
+#       print(mean(write_out_file$acc))
+#       print(table(write_out_file$cor_distance))
+#       
+#       col_order<-c("1_green", "2_green", "3_green", "4_green", "5_green", "6_green", 
+#                    "7_green", "8_green", "9_green", "10_green", "11_green", "12_green", 
+#                    "13_green", "14_green", "15_green", "16_green",
+#                    "1_blue", "2_blue", "3_blue", "4_blue", "5_blue", "6_blue", "7_blue", 
+#                    "8_blue", "9_blue", "10_blue", "11_blue", "12_blue", 
+#                    "13_blue", "14_blue", "15_blue", "16_blue")
+#       write_out_file<- write_out_file %>%
+#         slice(match(col_order, cue))
+#       
+#       outname<-paste0(sub,"_task-",task,"_run-0",run,"_pred_behav_regressors.txt")
+#       
+#       if ((sub == 'sub-01') & (run == 1)) {
+#         behav_data<-write_out_file
+#       }
+#       else {
+#         behav_data<-rbind(behav_data, write_out_file)
+#       }
+#       
+#       #Uncomment this to write the regressors by room number
+#       #write.table(write_out_file, outname, col.names= colnames(write_out_file), 
+#       #            row.names= FALSE, sep = "\t"  )
+#     }
+#   }
+# }
 
 predAcc<-behav_data %>% 
   #dplyr::group_by(participant) %>% 
