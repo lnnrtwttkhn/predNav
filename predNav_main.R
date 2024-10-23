@@ -167,7 +167,7 @@ predAccDistOverall$avg[predAccDistOverall$cor_distance == 1] - predAccDistOveral
 #accuracy distance model
 summary(glmer(avgAcc~cor_distance+(1+cor_distance|participant), family = "binomial", data = figure2_data))
 #rt distance model
-summary(lmer(avgRT~cor_distance+(1+cor_distance|participant),  data = figure2_data, subset = (avgAcc ==1)))
+summary(lmer(avgRT~cor_distance+(1+cor_distance|participant),  data = figure2_data))
 
 #accuracy graph
 pd <- position_jitter(w=0.2, h=0)
