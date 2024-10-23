@@ -146,25 +146,25 @@ library(RColorBrewer)
 figure2_data <- read.csv("data/figure2.csv")
 predAcc<-figure2_data %>% 
   #dplyr::group_by(participant) %>% 
-  dplyr::summarise(avg = mean(acc, na.rm = T)) 
+  dplyr::summarise(avg = mean(avgAcc, na.rm = T)) 
 predAcc
 
 predAccDist<-figure2_data  %>% 
   dplyr::group_by(participant, cor_distance) %>% 
-  dplyr::summarise(avg = mean(acc, na.rm = T)) %>% 
+  dplyr::summarise(avg = mean(avgAcc, na.rm = T)) %>% 
   dplyr::filter(!is.na(cor_distance))
 predAccDist
 
 predAccDistOverall<-figure2_data %>% 
   dplyr::group_by(cor_distance) %>% 
-  dplyr::summarise(avg = mean(acc, na.rm = T)) %>% 
+  dplyr::summarise(avg = mean(avgAcc, na.rm = T)) %>% 
   dplyr::filter(!is.na(cor_distance))
 predAccDistOverall
 
 #accuracy distance model
-summary(glmer(acc~cor_distance+(1+cor_distance|participant), family = "binomial", data = figure2_data))
+summary(glmer(avgAcc~cor_distance+(1+cor_distance|participant), family = "binomial", data = figure2_data))
 #rt distance model
-summary(lmer(rt~cor_distance+(1+cor_distance|participant),  data = figure2_data, subset = (acc ==1)))
+summary(lmer(avgRT~cor_distance+(1+cor_distance|participant),  data = figure2_data, subset = (avgAcc ==1)))
 
 #accuracy graph
 pd <- position_jitter(w=0.2, h=0)
@@ -186,15 +186,15 @@ predAcc_plot
 #cor dist RT graph
 predRTDist<-figure2_data %>% 
   dplyr::group_by(participant, cor_distance) %>%
-  dplyr::filter(acc == 1) %>% 
-  dplyr::summarise(avg = mean(rt, na.rm = T)) %>% 
+  dplyr::filter(avgAcc == 1) %>% 
+  dplyr::summarise(avg = mean(avgRT, na.rm = T)) %>% 
   dplyr::filter(!is.na(cor_distance))
 predRTDist
 
 predRTDistOverall<-figure2_data %>% 
   dplyr::group_by(cor_distance) %>%
-  dplyr::filter(acc == 1) %>% 
-  dplyr::summarise(avg = mean(rt, na.rm = T)) %>% 
+  dplyr::filter(avgAcc == 1) %>% 
+  dplyr::summarise(avg = mean(avgRT, na.rm = T)) %>% 
   dplyr::filter(!is.na(cor_distance))
 predRTDistOverall
 
