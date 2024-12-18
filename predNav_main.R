@@ -196,10 +196,13 @@ predRTDist
 
 predRTDistOverall<-figure2_data %>% 
   dplyr::group_by(cor_distance) %>%
-  dplyr::filter(avgAcc == 1) %>% 
+  dplyr::filter(avgAcc == 1) %>%
   dplyr::summarise(avg = mean(avgRT, na.rm = T)) %>% 
   dplyr::filter(!is.na(cor_distance))
 predRTDistOverall
+
+mean(diff(predRTDistOverall$avg))
+predRTDistOverall$avg[predRTDistOverall$cor_distance == 1] - predRTDistOverall$avg[predRTDistOverall$cor_distance == 4]
 
 pd <- position_jitter(w=0.2, h=0)
 predRT_plot <- ggplot() +
